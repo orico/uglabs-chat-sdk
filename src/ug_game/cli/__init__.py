@@ -1,0 +1,1 @@
+"""UG Game CLI module."""
