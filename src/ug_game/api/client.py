@@ -181,12 +181,13 @@ class UGGameClient:
             "type": "stream",
             "kind": "interact",
             "text": text,
-            "context": {},
             "audio_output": audio_output,
+            # "audio_input": False,  # Explicitly indicate this is text-only
             "uid": str(uuid.uuid4()),
             "client_start_time": asyncio.get_event_loop().time(),
         }
 
+        print(f"DEBUG: Sending interact message: {message}")
         await self.send_message(message)
 
         # Yield responses until interaction is complete
@@ -194,3 +195,85 @@ class UGGameClient:
             yield response
             if response.get("kind") == "close":
                 break
+
+    async def send_audio_transcription(
+        self, audio_data: bytes, language_code: str = "en", sample_rate: int = 16000
+    ) -> str:
+        """Send audio data for transcription using the correct UG Labs Transcription API protocol."""
+        import base64
+        import io
+        import wave
+
+        # Convert raw PCM to WAV format using the actual sample rate from recording
+        channels = 1
+        sample_width = 2  # 16-bit = 2 bytes
+
+        # Create WAV data in memory
+        wav_buffer = io.BytesIO()
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(sample_width)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio_data)
+
+        wav_bytes = wav_buffer.getvalue()
+
+        # Generate unique ID for this transcription session
+        transcription_uid = str(uuid.uuid4())
+        chunk_size = 32000  # 32KB as recommended by docs
+
+        # Send audio in chunks
+        for i in range(0, len(wav_bytes), chunk_size):
+            chunk = wav_bytes[i:i + chunk_size]
+            audio_b64 = base64.b64encode(chunk).decode('utf-8')
+
+            message = {
+                "type": "request",
+                "uid": transcription_uid,
+                "kind": "add_audio",
+                "timestamp": asyncio.get_event_loop().time(),
+                "audio": audio_b64,
+                "config": {
+                    "sampling_rate": sample_rate,
+                    "mime_type": "audio/wav"
+                }
+            }
+
+            await self.send_message(message)
+
+            # Wait for acknowledgment (optional, but good practice)
+            try:
+                async for response in self.receive_messages():
+                    if response.get("uid") == transcription_uid:
+                        break
+            except Exception:
+                pass  # Continue if no ack received
+
+        # Request transcription
+        transcribe_message = {
+            "type": "request",
+            "uid": transcription_uid,
+            "kind": "transcribe",
+            "timestamp": asyncio.get_event_loop().time(),
+            "language_code": language_code
+        }
+
+        await self.send_message(transcribe_message)
+
+        # Wait for transcription response with timeout
+        timeout = 10.0  # 10 second timeout
+        try:
+            async with asyncio.timeout(timeout):
+                async for response in self.receive_messages():
+                    print(f"DEBUG: Received response: {response}")  # Debug all responses
+                    if (response.get("kind") == "transcribe" and
+                        response.get("uid") == transcription_uid):
+                        transcribed_text = response.get("text", "")
+                        print(f"DEBUG: Found transcription response: '{transcribed_text}'")
+                        return transcribed_text
+        except asyncio.TimeoutError:
+            print(f"DEBUG: Transcription timeout after {timeout} seconds")
+            return ""
+
+        print("DEBUG: No transcription response received")
+        return ""  # Return empty string if no transcription received
