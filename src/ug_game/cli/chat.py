@@ -342,8 +342,12 @@ class ChatSession:
                 self.console.print("[yellow]UG transcription failed - not sending to chat API[/yellow]")
                 return
 
-            # Small delay to ensure transcription session is fully closed
-            await asyncio.sleep(0.5)
+            # Disconnect and reconnect to ensure clean WebSocket state
+            self.console.print("[dim]Reconnecting WebSocket for clean text interaction...[/dim]")
+            await self.client.disconnect()
+            await self.client.connect()
+            await self.client.authenticate_websocket()
+            await self.client.set_configuration({"prompt": settings.default_prompt})
 
             # Send UG transcribed text to API for chat response
             text_responses = []

@@ -187,6 +187,9 @@ class UGGameClient:
             "client_start_time": asyncio.get_event_loop().time(),
         }
 
+        # if audio_output:
+            # message["audio_output"] = audio_output
+
         print(f"DEBUG: Sending interact message: {message}")
         await self.send_message(message)
 
