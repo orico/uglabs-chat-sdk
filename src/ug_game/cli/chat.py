@@ -342,7 +342,8 @@ class ChatSession:
                 self.console.print("[yellow]UG transcription failed - not sending to chat API[/yellow]")
                 return
 
-            # Disconnect and reconnect to ensure clean WebSocket state
+            # Disconnect and reconnect to ensure clean WebSocket state - this is a hack! 
+            # TODO: Find a better way to do this.
             self.console.print("[dim]Reconnecting WebSocket for clean text interaction...[/dim]")
             await self.client.disconnect()
             await self.client.connect()

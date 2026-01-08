@@ -181,14 +181,10 @@ class UGGameClient:
             "type": "stream",
             "kind": "interact",
             "text": text,
-            "audio_output": audio_output,
-            # "audio_input": False,  # Explicitly indicate this is text-only
+            "audio_output": audio_output, 
             "uid": str(uuid.uuid4()),
             "client_start_time": asyncio.get_event_loop().time(),
-        }
-
-        # if audio_output:
-            # message["audio_output"] = audio_output
+        } 
 
         print(f"DEBUG: Sending interact message: {message}")
         await self.send_message(message)
