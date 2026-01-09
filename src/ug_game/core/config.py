@@ -1,5 +1,6 @@
 """Configuration management for UG Game."""
 
+import os
 from typing import Optional
 
 from pydantic import Field, SecretStr
@@ -26,7 +27,7 @@ class UGGameSettings(BaseSettings):
     )
 
     class Config:
-        env_file = ".env"
+        env_file = ".env" if os.path.exists(".env") else None
         env_file_encoding = "utf-8"
         case_sensitive = False
 
