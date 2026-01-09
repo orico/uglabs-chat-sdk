@@ -6,32 +6,31 @@ This script demonstrates the basic interaction flow with the WebSocket API.
 
 import asyncio
 import json
-import uuid
-import websockets
-from datetime import datetime, timezone
 import os
+import uuid
+from datetime import datetime, timezone
+
+import websockets
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configuration - you'll need to set these environment variables or replace with your values
-SERVICE_ACCOUNT_API_KEY = os.getenv('SERVICE_ACCOUNT_API_KEY')
-PLAYER_FEDERATED_ID = os.getenv('PLAYER_FEDERATED_ID')
+SERVICE_ACCOUNT_API_KEY = os.getenv("SERVICE_ACCOUNT_API_KEY")
+PLAYER_FEDERATED_ID = os.getenv("PLAYER_FEDERATED_ID")
 
 # API endpoints
 BASE_URL = "https://pug.stg.uglabs.app"
 WS_URL = "wss://pug.stg.uglabs.app/interact"
 
-async def get_access_token():
+
+async def get_access_token() -> str:
     """Get access token for player authentication."""
     import aiohttp
 
     async with aiohttp.ClientSession() as session:
-        payload = {
-            "api_key": SERVICE_ACCOUNT_API_KEY,
-            "federated_id": PLAYER_FEDERATED_ID
-        }
+        payload = {"api_key": SERVICE_ACCOUNT_API_KEY, "federated_id": PLAYER_FEDERATED_ID}
 
         async with session.post(f"{BASE_URL}/api/auth/login", json=payload) as response:
             if response.status != 200:
@@ -39,9 +38,10 @@ async def get_access_token():
                 raise Exception(f"Failed to get access token: {response.status} - {error_text}")
 
             data = await response.json()
-            return data["access_token"]
+            return str(data["access_token"])
 
-async def interact_with_pug():
+
+async def interact_with_pug() -> None:
     """Main interaction function using WebSocket."""
 
     # Get access token
@@ -64,7 +64,7 @@ async def interact_with_pug():
                 "kind": "authenticate",
                 "access_token": access_token,
                 "uid": auth_uid,
-                "client_start_time": datetime.now(timezone.utc).isoformat()
+                "client_start_time": datetime.now(timezone.utc).isoformat(),
             }
 
             print("Sending authentication...")
@@ -84,7 +84,7 @@ async def interact_with_pug():
                     "prompt": "You are a helpful AI assistant. Respond to user messages in a friendly and engaging way."
                 },
                 "uid": config_uid,
-                "client_start_time": datetime.now(timezone.utc).isoformat()
+                "client_start_time": datetime.now(timezone.utc).isoformat(),
             }
 
             print("Setting configuration...")
@@ -106,7 +106,7 @@ async def interact_with_pug():
                 "context": {},
                 "audio_output": False,  # No voice output
                 "uid": interact_uid,
-                "client_start_time": datetime.now(timezone.utc).isoformat()
+                "client_start_time": datetime.now(timezone.utc).isoformat(),
             }
 
             print(f"Sending text message: '{text_message}'")
@@ -144,23 +144,25 @@ async def interact_with_pug():
     except Exception as e:
         print(f"✗ WebSocket error: {e}")
 
-async def main():
+
+async def main() -> None:
     """Main function to run the interaction."""
     print("UG Labs PUG API Text Interaction Script")
     print("=" * 50)
 
     # Check if required environment variables are set
-    if SERVICE_ACCOUNT_API_KEY == 'your-service-account-api-key':
+    if SERVICE_ACCOUNT_API_KEY == "your-service-account-api-key":
         print("⚠️  Please set SERVICE_ACCOUNT_API_KEY environment variable")
         print("   Get it from: https://pug-playground.stg.uglabs.app/service-accounts")
         return
 
-    if PLAYER_FEDERATED_ID == 'your-player-federated-id':
+    if PLAYER_FEDERATED_ID == "your-player-federated-id":
         print("⚠️  Please set PLAYER_FEDERATED_ID environment variable")
         print("   Get it from: https://pug-playground.stg.uglabs.app/players")
         return
 
     await interact_with_pug()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

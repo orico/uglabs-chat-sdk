@@ -6,34 +6,39 @@ import os
 import sys
 from pathlib import Path
 
+from pydantic import SecretStr
+
 # Add src to path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from ug_game.api.client import UGGameClient
-from ug_game.core.config import settings
+from ug_game.api.client import UGGameClient  # noqa: E402
+from ug_game.core.config import settings  # noqa: E402
 
 
-async def demo_chat():
+async def demo_chat() -> None:
     """Demo a simple chat interaction."""
     print("🎪 UG Game Chat Demo")
     print("=" * 50)
 
     # Set demo credentials from environment
-    settings.service_account_api_key = os.getenv("SERVICE_ACCOUNT_API_KEY")
-    settings.player_federated_id = os.getenv("PLAYER_FEDERATED_ID")
+    api_key = os.getenv("SERVICE_ACCOUNT_API_KEY")
+    federated_id = os.getenv("PLAYER_FEDERATED_ID")
 
-    if not settings.service_account_api_key or not settings.player_federated_id:
+    if not api_key or not federated_id:
         print("❌ Please set SERVICE_ACCOUNT_API_KEY and PLAYER_FEDERATED_ID environment variables")
         return
+
+    settings.service_account_api_key = SecretStr(api_key)
+    settings.player_federated_id = federated_id
 
     client = UGGameClient()
 
     try:
         print("🔐 Authenticating...")
+        assert settings.service_account_api_key is not None
         await client.authenticate_player(
-            settings.service_account_api_key.get_secret_value(),
-            settings.player_federated_id
+            settings.service_account_api_key.get_secret_value(), settings.player_federated_id
         )
         print("✅ Authentication successful")
 
