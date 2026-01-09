@@ -119,6 +119,8 @@ The interactive chat interface provides a rich terminal experience with voice an
 python run_chat.py
 ```
 
+![Chat Interface](docs/chat.png)
+
 **What happens on startup:**
 1. Authenticates with UG Labs API using your credentials
 2. Establishes WebSocket connection for real-time chat
