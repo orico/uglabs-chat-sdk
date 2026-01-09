@@ -3,24 +3,25 @@
 import asyncio
 import base64
 import io
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from pydub import AudioSegment
 
-from ..api.client import UGGameClient, UGGameAPIError
+from ..api.client import UGGameAPIError, UGGameClient
 from ..core.config import settings
 from ..core.voice import (
     record_voice_input_async,
-    play_audio_response_async,
 )
-from .types import ChatResponse, ChatCallbacks, ChatConfig
+from .types import ChatCallbacks, ChatConfig, ChatResponse
 
 
-def _process_audio_chunks(audio_responses: List, debug_mode: bool = False) -> bytes:
+def _process_audio_chunks(
+    audio_responses: List[Union[str, bytes]], debug_mode: bool = False
+) -> bytes:
     """Process audio response chunks and convert to PCM format."""
     processed_audio_chunks = []
-    
+
     for i, audio_data in enumerate(audio_responses, 1):
         if isinstance(audio_data, str):
             # Decode base64 string to bytes
@@ -30,13 +31,20 @@ def _process_audio_chunks(audio_responses: List, debug_mode: bool = False) -> by
             audio_bytes = audio_data
 
         if debug_mode:
-            print(f"Debug: Processing audio chunk {i}/{len(audio_responses)}: {len(audio_bytes)} bytes")
+            print(
+                f"Debug: Processing audio chunk {i}/{len(audio_responses)}: {len(audio_bytes)} bytes"
+            )
 
         # Check if this looks like MP3 data (ID3 header or MP3 frame sync)
         is_mp3_like = False
-        if len(audio_bytes) >= 3 and audio_bytes[:3] == b'ID3':
+        if len(audio_bytes) >= 3 and audio_bytes[:3] == b"ID3":
             is_mp3_like = True
-        elif len(audio_bytes) >= 2 and audio_bytes[:2] in [b'\xff\xfb', b'\xff\xf3', b'\xff\xfa', b'\xff\xf2']:
+        elif len(audio_bytes) >= 2 and audio_bytes[:2] in [
+            b"\xff\xfb",
+            b"\xff\xf3",
+            b"\xff\xfa",
+            b"\xff\xf2",
+        ]:
             is_mp3_like = True
 
         if is_mp3_like:
@@ -56,7 +64,7 @@ def _process_audio_chunks(audio_responses: List, debug_mode: bool = False) -> by
                 # If MP3 decoding fails, try as raw data instead
                 if len(audio_bytes) > 0 and len(audio_bytes) % 2 == 0:
                     processed_audio_chunks.append(audio_bytes)
-        elif len(audio_bytes) > 44 and audio_bytes[:4] == b'RIFF':
+        elif len(audio_bytes) > 44 and audio_bytes[:4] == b"RIFF":
             # WAV file - extract PCM data (skip WAV header)
             pcm_data = audio_bytes[44:]  # Skip 44-byte WAV header
             processed_audio_chunks.append(pcm_data)
@@ -68,13 +76,13 @@ def _process_audio_chunks(audio_responses: List, debug_mode: bool = False) -> by
 
     if processed_audio_chunks:
         # Combine all audio chunks if multiple
-        combined_audio = b''.join(processed_audio_chunks)
+        combined_audio = b"".join(processed_audio_chunks)
         # Ensure PCM data is properly aligned (multiple of 2 for 16-bit audio)
         if len(combined_audio) % 2 != 0:
             combined_audio = combined_audio[:-1]  # Remove last byte if odd length
         return combined_audio
-    
-    return b''
+
+    return b""
 
 
 class ChatSession:
@@ -124,12 +132,9 @@ class ChatSession:
         """
         try:
             self.callbacks._call_status("Authenticating...")
-            
+
             # Authenticate player
-            await self.client.authenticate_player(
-                service_account_api_key,
-                player_federated_id
-            )
+            await self.client.authenticate_player(service_account_api_key, player_federated_id)
             self.callbacks._call_status("Authentication successful")
 
             # Connect to WebSocket
@@ -154,9 +159,7 @@ class ChatSession:
             self.callbacks._call_error(e)
             raise
 
-    async def send_text(
-        self, text: str, audio_output: bool = False
-    ) -> ChatResponse:
+    async def send_text(self, text: str, audio_output: bool = False) -> ChatResponse:
         """
         Send a text message and get response.
 
@@ -209,7 +212,7 @@ class ChatSession:
                     audio_responses, debug_mode=self.config.debug_mode
                 )
 
-            response = ChatResponse(
+            chat_response = ChatResponse(
                 text=full_text,
                 audio=processed_audio if processed_audio else None,
             )
@@ -218,15 +221,13 @@ class ChatSession:
             if full_text:
                 self.message_history.append(text)
 
-            return response
+            return chat_response
 
         except UGGameAPIError as e:
             self.callbacks._call_error(e)
             return ChatResponse(error=e)
 
-    async def send_voice(
-        self, audio_data: bytes, sample_rate: int = 16000
-    ) -> ChatResponse:
+    async def send_voice(self, audio_data: bytes, sample_rate: int = 16000) -> ChatResponse:
         """
         Send voice audio data (already recorded).
 
@@ -263,14 +264,17 @@ class ChatSession:
             await self.client.disconnect()
             await self.client.connect()
             await self.client.authenticate_websocket()
-            await self.client.set_configuration({"prompt": self.system_prompt or settings.default_prompt})
+            await self.client.set_configuration(
+                {"prompt": self.system_prompt or settings.default_prompt}
+            )
 
             # Send transcribed text to API
             text_responses = []
             audio_responses = []
 
             try:
-                async with asyncio.timeout(10.0):
+                # Create a task for the async generator with timeout
+                async def wait_for_text_interaction():
                     async for response in self.client.send_text_interaction(
                         transcribed_text, audio_output=self.config.audio_output
                     ):
@@ -291,6 +295,8 @@ class ChatSession:
 
                         if response.get("kind") == "close":
                             break
+
+                await asyncio.wait_for(wait_for_text_interaction(), timeout=10.0)
 
             except asyncio.TimeoutError:
                 timeout_error = UGGameAPIError("Text interaction timed out")
@@ -322,9 +328,7 @@ class ChatSession:
             self.callbacks._call_error(e)
             return ChatResponse(error=e)
 
-    async def record_and_send_voice(
-        self, duration_seconds: int = 3
-    ) -> ChatResponse:
+    async def record_and_send_voice(self, duration_seconds: int = 3) -> ChatResponse:
         """
         Record voice input and send it.
 
@@ -337,8 +341,7 @@ class ChatSession:
         try:
             self.callbacks._call_status(f"Recording voice for {duration_seconds} seconds...")
             audio_data = await record_voice_input_async(
-                duration_seconds=duration_seconds,
-                debug_mode=self.config.debug_mode
+                duration_seconds=duration_seconds, debug_mode=self.config.debug_mode
             )
 
             if not audio_data:
@@ -349,7 +352,7 @@ class ChatSession:
             # Check audio quality
             try:
                 # Check if this is WAV data (starts with 'RIFF') or raw PCM
-                if len(audio_data) > 44 and audio_data[:4] == b'RIFF':
+                if len(audio_data) > 44 and audio_data[:4] == b"RIFF":
                     pcm_data = audio_data[44:]  # Skip WAV header
                     audio_array = np.frombuffer(pcm_data, dtype=np.int16)
                 else:
@@ -367,7 +370,7 @@ class ChatSession:
                 pass  # Continue even if analysis fails
 
             # Use raw PCM data (skip WAV header if present)
-            if len(audio_data) > 44 and audio_data[:4] == b'RIFF':
+            if len(audio_data) > 44 and audio_data[:4] == b"RIFF":
                 pcm_data = audio_data[44:]
             else:
                 pcm_data = audio_data
@@ -403,9 +406,7 @@ class ChatSession:
             self.callbacks._call_error(e)
             raise
 
-    async def create_player(
-        self, developer_api_key: str, external_id: str
-    ) -> dict:
+    async def create_player(self, developer_api_key: str, external_id: str) -> Dict[str, Any]:
         """
         Create a new player.
 
@@ -421,9 +422,7 @@ class ChatSession:
         """
         try:
             self.callbacks._call_status("Creating player...")
-            player_data = await self.client.create_player(
-                developer_api_key, external_id
-            )
+            player_data = await self.client.create_player(developer_api_key, external_id)
             self.callbacks._call_status("Player created")
             return player_data
         except UGGameAPIError as e:

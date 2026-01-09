@@ -1,17 +1,17 @@
 """Command-line tool for managing UG Game players."""
 
 import asyncio
-from typing import List, Optional
+from typing import Any, Dict, List
 
 import click
 from rich.console import Console
 from rich.table import Table
 
-from ..api.client import UGGameClient, UGGameAPIError
+from ..api.client import UGGameAPIError, UGGameClient
 from ..core.config import settings
 
 
-async def list_players() -> List[dict]:
+async def list_players() -> List[Dict[str, Any]]:
     """List all players for the current team."""
     if not settings.developer_api_key:
         raise UGGameAPIError("DEVELOPER_API_KEY not set")
@@ -22,7 +22,7 @@ async def list_players() -> List[dict]:
         # Authenticate as developer
         await client.authenticate_player(
             settings.developer_api_key.get_secret_value(),
-            ""  # Developer auth doesn't need federated_id
+            "",  # Developer auth doesn't need federated_id
         )
 
         # This would need to be implemented in the client
@@ -32,7 +32,7 @@ async def list_players() -> List[dict]:
         await client.disconnect()
 
 
-async def create_player_cli(external_id: str) -> dict:
+async def create_player_cli(external_id: str) -> Dict[str, Any]:
     """Create a new player."""
     if not settings.developer_api_key:
         raise UGGameAPIError("DEVELOPER_API_KEY not set")
@@ -41,8 +41,7 @@ async def create_player_cli(external_id: str) -> dict:
 
     try:
         player_data = await client.create_player(
-            settings.developer_api_key.get_secret_value(),
-            external_id
+            settings.developer_api_key.get_secret_value(), external_id
         )
         return player_data
     finally:
@@ -57,7 +56,7 @@ def main():
 
 @main.command()
 @click.option("--external-id", required=True, help="External ID for the new player")
-def create(external_id: str):
+def create(external_id: str) -> None:
     """Create a new player."""
     console = Console()
 
@@ -100,7 +99,7 @@ def list():
             table.add_row(
                 str(player.get("pk", "")),
                 player.get("external_id", ""),
-                player.get("federated_id", "")
+                player.get("federated_id", ""),
             )
 
         console.print(table)

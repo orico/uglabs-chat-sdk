@@ -1,9 +1,6 @@
 """Tests for UG Game voice recording and playback functionality."""
 
-import asyncio
-import io
-import wave
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 import numpy as np
 import pytest
@@ -16,7 +13,6 @@ from ug_game.core.voice import (
     play_audio_response,
     play_audio_response_async,
     record_voice_input,
-    record_voice_input_async,
     save_wav_file,
 )
 
@@ -37,11 +33,13 @@ class TestAsyncVoiceRecorder:
         assert recorder.recorded_frames == []
 
     @pytest.mark.asyncio
-    @patch('threading.Thread')
-    @patch('sounddevice.InputStream')
-    @patch('sounddevice.sleep')
-    @patch('asyncio.sleep')
-    async def test_record_audio_success(self, mock_asyncio_sleep, mock_sd_sleep, mock_input_stream, mock_thread, recorder):
+    @patch("threading.Thread")
+    @patch("sounddevice.InputStream")
+    @patch("sounddevice.sleep")
+    @patch("asyncio.sleep")
+    async def test_record_audio_success(
+        self, mock_asyncio_sleep, mock_sd_sleep, mock_input_stream, mock_thread, recorder
+    ):
         """Test successful audio recording."""
         # Mock the input stream context manager
         mock_stream = MagicMock()
@@ -61,7 +59,7 @@ class TestAsyncVoiceRecorder:
 
         mock_asyncio_sleep.side_effect = set_frames_after_sleep
 
-        with patch('ug_game.core.voice.save_wav_file', return_value=None):
+        with patch("ug_game.core.voice.save_wav_file", return_value=None):
             result = await recorder.record_audio(duration_seconds=0.1)
 
         assert result is not None
@@ -69,8 +67,8 @@ class TestAsyncVoiceRecorder:
         assert len(result) > 0
 
     @pytest.mark.asyncio
-    @patch('sounddevice.InputStream')
-    @patch('asyncio.sleep')
+    @patch("sounddevice.InputStream")
+    @patch("asyncio.sleep")
     async def test_record_audio_no_frames(self, mock_asyncio_sleep, mock_input_stream, recorder):
         """Test audio recording with no frames recorded."""
         # Mock the input stream context manager
@@ -86,8 +84,8 @@ class TestAsyncVoiceRecorder:
         assert result is None
 
     @pytest.mark.asyncio
-    @patch('sounddevice.InputStream')
-    @patch('asyncio.sleep')
+    @patch("sounddevice.InputStream")
+    @patch("asyncio.sleep")
     async def test_record_audio_exception(self, mock_asyncio_sleep, mock_input_stream, recorder):
         """Test audio recording with exception."""
         # Mock the input stream to raise an exception
@@ -115,7 +113,7 @@ class TestVoiceRecorder:
         assert recorder.is_recording is False
         assert recorder.recorded_frames == []
 
-    @patch('pyaudio.PyAudio')
+    @patch("pyaudio.PyAudio")
     def test_start_recording_success(self, mock_pyaudio, recorder):
         """Test successful recording start."""
         # Mock PyAudio and stream
@@ -132,7 +130,7 @@ class TestVoiceRecorder:
         assert recorder.audio == mock_pa
         assert recorder.stream == mock_stream
 
-    @patch('pyaudio.PyAudio')
+    @patch("pyaudio.PyAudio")
     def test_start_recording_exception(self, mock_pyaudio, recorder):
         """Test recording start with exception."""
         mock_pyaudio.side_effect = Exception("PyAudio error")
@@ -142,7 +140,7 @@ class TestVoiceRecorder:
         assert result is False
         assert recorder.is_recording is False
 
-    @patch('pyaudio.PyAudio')
+    @patch("pyaudio.PyAudio")
     def test_stop_recording_success(self, mock_pyaudio, recorder):
         """Test successful recording stop."""
         # Mock PyAudio and stream
@@ -155,12 +153,12 @@ class TestVoiceRecorder:
         # Set up recorder as if recording
         recorder.audio = mock_pa
         recorder.stream = mock_stream
-        recorder.recorded_frames = [b'frame1', b'frame2']
+        recorder.recorded_frames = [b"frame1", b"frame2"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             result = recorder.stop_recording()
 
-        assert result == b'frame1frame2'
+        assert result == b"frame1frame2"
         mock_stream.stop_stream.assert_called()
         mock_stream.close.assert_called()
         mock_pa.terminate.assert_called()
@@ -185,7 +183,7 @@ class TestAudioPlayer:
         assert player.sample_rate == 16000
         assert player.channels == 1
 
-    @patch('pyaudio.PyAudio')
+    @patch("pyaudio.PyAudio")
     def test_play_audio_data_success(self, mock_pyaudio_class):
         """Test successful audio playback."""
         # Mock PyAudio instance before creating player
@@ -199,7 +197,7 @@ class TestAudioPlayer:
         player = AudioPlayer()
 
         # Create test PCM data (ensure it's valid 16-bit PCM)
-        pcm_data = b'\x00\x01\x02\x03\x04\x05\x06\x07'  # Valid 16-bit samples
+        pcm_data = b"\x00\x01\x02\x03\x04\x05\x06\x07"  # Valid 16-bit samples
 
         player.play_audio_data(pcm_data)
 
@@ -208,7 +206,7 @@ class TestAudioPlayer:
         mock_stream.stop_stream.assert_called()
         mock_stream.close.assert_called()
 
-    @patch('pyaudio.PyAudio')
+    @patch("pyaudio.PyAudio")
     def test_play_audio_data_exception(self, mock_pyaudio, player):
         """Test audio playback with exception."""
         mock_pyaudio.side_effect = Exception("Playback error")
@@ -238,7 +236,7 @@ def test_generate_test_audio():
     assert len(audio_data) == expected_samples * 2  # 2 bytes per 16-bit sample
 
 
-@patch('pyaudio.PyAudio')
+@patch("pyaudio.PyAudio")
 def test_play_audio_response(mock_pyaudio):
     """Test the play_audio_response function."""
     # Mock PyAudio
@@ -251,15 +249,15 @@ def test_play_audio_response(mock_pyaudio):
     # Create test audio
     audio_data = generate_test_audio(duration_seconds=0.1)
 
-    with patch('time.sleep'):
+    with patch("time.sleep"):
         play_audio_response(audio_data)
 
     # Verify PyAudio was used
     mock_pa.open.assert_called()
 
 
-@patch('ug_game.core.voice.VoiceRecorder')
-@patch('time.sleep')
+@patch("ug_game.core.voice.VoiceRecorder")
+@patch("time.sleep")
 def test_record_voice_input(mock_time_sleep, mock_voice_recorder_class):
     """Test the record_voice_input function."""
     mock_recorder = MagicMock()
@@ -267,24 +265,24 @@ def test_record_voice_input(mock_time_sleep, mock_voice_recorder_class):
 
     # Mock the recording process
     mock_recorder.start_recording.return_value = True
-    mock_recorder.stop_recording.return_value = b'test_audio_data'
+    mock_recorder.stop_recording.return_value = b"test_audio_data"
 
-    with patch('builtins.print'):  # Suppress print statements
+    with patch("builtins.print"):  # Suppress print statements
         result = record_voice_input(duration_seconds=2)
 
-    assert result == b'test_audio_data'
+    assert result == b"test_audio_data"
     mock_recorder.start_recording.assert_called_once()
     mock_time_sleep.assert_called_once_with(2)
     mock_recorder.stop_recording.assert_called_once()
 
 
-@patch('builtins.open', new_callable=mock_open)
+@patch("builtins.open", new_callable=mock_open)
 def test_save_wav_file_debug_mode(mock_file):
     """Test saving WAV file in debug mode."""
     # Create valid PCM data (even number of bytes for 16-bit samples)
-    audio_data = b'\x00\x01\x02\x03\x04\x05\x06\x07'  # 4 samples
+    audio_data = b"\x00\x01\x02\x03\x04\x05\x06\x07"  # 4 samples
 
-    with patch('pathlib.Path') as mock_path:
+    with patch("pathlib.Path") as mock_path:
         mock_path_instance = MagicMock()
         mock_path.return_value = mock_path_instance
         mock_path_instance.exists.return_value = True
@@ -296,19 +294,15 @@ def test_save_wav_file_debug_mode(mock_file):
     mock_file.assert_called()
 
 
-@patch('builtins.open', new_callable=mock_open)
+@patch("builtins.open", new_callable=mock_open)
 def test_save_wav_file_no_debug(mock_file):
     """Test saving WAV file without debug mode."""
-    audio_data = b'test_wav_data'
+    audio_data = b"test_wav_data"
 
     result = save_wav_file(audio_data, debug_mode=False)
 
     assert result is None
     mock_file.assert_not_called()
-
-
-
-
 
 
 @pytest.fixture
@@ -322,22 +316,19 @@ async def test_play_audio_data_async(player):
     """Test asynchronous audio data playback."""
     audio_data = b"test_audio_data"
 
-    with patch.object(player, 'play_audio_data') as mock_play:
+    with patch.object(player, "play_audio_data") as mock_play:
         await player.play_audio_data_async(audio_data)
 
         mock_play.assert_called_once_with(audio_data)
 
 
-@patch('pyaudio.PyAudio')
+@patch("pyaudio.PyAudio")
 @pytest.mark.asyncio
 async def test_play_audio_response_async(mock_pyaudio_class):
     """Test asynchronous audio response playback."""
     audio_data = b"test_audio_data"
 
-    with patch('ug_game.core.voice.play_audio_response') as mock_play:
+    with patch("ug_game.core.voice.play_audio_response") as mock_play:
         await play_audio_response_async(audio_data, sample_rate=16000)
 
         mock_play.assert_called_once_with(audio_data, 16000)
-
-
-

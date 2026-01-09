@@ -2,13 +2,12 @@
 
 import asyncio
 import io
-import os
 import pathlib
 import threading
 import time
 import wave
 from datetime import datetime
-from typing import Optional
+from typing import Any, List, Optional
 
 import numpy as np
 import pyaudio
@@ -22,9 +21,11 @@ class AsyncVoiceRecorder:
         self.sample_rate = sample_rate
         self.channels = channels
         self.is_recording = False
-        self.recorded_frames = []
+        self.recorded_frames: List[np.ndarray] = []
 
-    async def record_audio(self, duration_seconds: float, debug_mode: bool = False) -> Optional[bytes]:
+    async def record_audio(
+        self, duration_seconds: float, debug_mode: bool = False
+    ) -> Optional[bytes]:
         """Record audio asynchronously for specified duration and return WAV data."""
         try:
             self.recorded_frames = []
@@ -38,7 +39,6 @@ class AsyncVoiceRecorder:
                     self.recorded_frames.append(indata.copy())
 
             # Start recording in a thread to avoid blocking
-            loop = asyncio.get_event_loop()
 
             def record_thread():
                 try:
@@ -46,7 +46,7 @@ class AsyncVoiceRecorder:
                         samplerate=self.sample_rate,
                         channels=self.channels,
                         callback=callback,
-                        blocksize=1024
+                        blocksize=1024,
                     ):
                         start_time = time.time()
                         while self.is_recording and (time.time() - start_time) < duration_seconds:
@@ -77,14 +77,14 @@ class AsyncVoiceRecorder:
                     audio_array.tobytes(),
                     sample_rate=self.sample_rate,
                     channels=self.channels,
-                    debug_mode=debug_mode
+                    debug_mode=debug_mode,
                 )
                 if wav_filepath:
                     print(f"💾 Audio saved to: {wav_filepath}")
 
                 # Create WAV file in memory for return value
                 wav_buffer = io.BytesIO()
-                with wave.open(wav_buffer, 'wb') as wav_file:
+                with wave.open(wav_buffer, "wb") as wav_file:
                     wav_file.setnchannels(self.channels)
                     wav_file.setsampwidth(2)  # 16-bit = 2 bytes
                     wav_file.setframerate(self.sample_rate)
@@ -110,15 +110,16 @@ class VoiceRecorder:
     def __init__(self, sample_rate: int = 16000, channels: int = 1):
         self.sample_rate = sample_rate
         self.channels = channels
-        self.audio = None
-        self.stream = None
+        self.audio: Optional[Any] = None  # pyaudio.PyAudio instance
+        self.stream: Optional[Any] = None  # pyaudio stream instance
         self.is_recording = False
-        self.recorded_frames = []
+        self.recorded_frames: List[bytes] = []
 
     def start_recording(self) -> bool:
         """Start recording audio from microphone. Returns True if successful."""
         try:
             import pyaudio
+
             self.recorded_frames = []
             self.is_recording = True
 
@@ -128,13 +129,13 @@ class VoiceRecorder:
                 channels=self.channels,
                 rate=self.sample_rate,
                 input=True,
-                frames_per_buffer=1024
+                frames_per_buffer=1024,
             )
 
             def record_thread():
                 try:
                     while self.is_recording:
-                        data = self.stream.read(1024, exception_on_overflow=False)
+                        data = self.stream.read(1024, exception_on_overflow=False)  # type: ignore[union-attr]
                         self.recorded_frames.append(data)
                 except Exception as e:
                     print(f"Recording thread error: {e}")
@@ -163,7 +164,7 @@ class VoiceRecorder:
 
             if self.recorded_frames:
                 # Combine all frames into a single bytes object
-                audio_data = b''.join(self.recorded_frames)
+                audio_data = b"".join(self.recorded_frames)
                 return audio_data
 
         except Exception as e:
@@ -194,10 +195,7 @@ class AudioPlayer:
         """Play audio data synchronously."""
         try:
             stream = self.audio.open(
-                format=pyaudio.paInt16,
-                channels=self.channels,
-                rate=self.sample_rate,
-                output=True
+                format=pyaudio.paInt16, channels=self.channels, rate=self.sample_rate, output=True
             )
 
             # Convert bytes to numpy array for playback
@@ -206,7 +204,7 @@ class AudioPlayer:
             # Play in chunks to avoid buffer issues
             chunk_size = 1024
             for i in range(0, len(audio_array), chunk_size):
-                chunk = audio_array[i:i + chunk_size]
+                chunk = audio_array[i : i + chunk_size]
                 stream.write(chunk.tobytes())
 
             stream.stop_stream()
@@ -225,7 +223,9 @@ class AudioPlayer:
         self.audio.terminate()
 
 
-def record_voice_input(duration_seconds: int = 5, sample_rate: int = 16000, debug_mode: bool = False) -> Optional[bytes]:
+def record_voice_input(
+    duration_seconds: int = 5, sample_rate: int = 16000, debug_mode: bool = False
+) -> Optional[bytes]:
     """
     Record voice input for a specified duration.
 
@@ -258,7 +258,7 @@ def record_voice_input(duration_seconds: int = 5, sample_rate: int = 16000, debu
                     audio_data,
                     sample_rate=sample_rate,
                     channels=1,  # Mono
-                    debug_mode=debug_mode
+                    debug_mode=debug_mode,
                 )
                 print(f"✅ Recording complete ({len(audio_data)} bytes)")
                 if wav_filepath:
@@ -282,7 +282,9 @@ def record_voice_input(duration_seconds: int = 5, sample_rate: int = 16000, debu
         recorder.cleanup()
 
 
-async def record_voice_input_async(duration_seconds: int = 3, sample_rate: int = 16000, debug_mode: bool = False) -> Optional[bytes]:
+async def record_voice_input_async(
+    duration_seconds: int = 3, sample_rate: int = 16000, debug_mode: bool = False
+) -> Optional[bytes]:
     """
     Record voice input asynchronously using sounddevice for better reliability.
 
@@ -301,7 +303,7 @@ async def record_voice_input_async(duration_seconds: int = 3, sample_rate: int =
 
         # Set up recording parameters
         channels = 1  # Mono
-        dtype = 'int16'  # 16-bit PCM
+        dtype = "int16"  # 16-bit PCM
 
         # Record audio
         recording = sd.rec(
@@ -310,14 +312,14 @@ async def record_voice_input_async(duration_seconds: int = 3, sample_rate: int =
             channels=channels,
             dtype=dtype,
             device=None,  # Use default input device
-            blocking=True  # Wait for recording to complete
+            blocking=True,  # Wait for recording to complete
         )
 
         # Wait for recording to finish (sd.rec with blocking=True waits automatically)
         print("✅ Recording complete")
 
         # Convert to bytes (sounddevice returns numpy array)
-        audio_data = recording.tobytes()
+        audio_data: bytes = recording.tobytes()
         return audio_data
 
     except KeyboardInterrupt:
@@ -328,8 +330,9 @@ async def record_voice_input_async(duration_seconds: int = 3, sample_rate: int =
         # Try to provide helpful error information
         try:
             import sounddevice as sd
+
             devices = sd.query_devices()
-            input_devices = [i for i, dev in enumerate(devices) if dev['max_input_channels'] > 0]
+            input_devices = [i for i, dev in enumerate(devices) if dev["max_input_channels"] > 0]
             if input_devices:
                 print(f"Available input devices: {input_devices}")
                 default_input = sd.default.device[0]
@@ -374,7 +377,9 @@ async def play_audio_response_async(audio_data: bytes, sample_rate: int = 16000)
     await loop.run_in_executor(None, play_audio_response, audio_data, sample_rate)
 
 
-def generate_test_audio(duration_seconds: float = 1.0, frequency: float = 440.0, sample_rate: int = 16000) -> bytes:
+def generate_test_audio(
+    duration_seconds: float = 1.0, frequency: float = 440.0, sample_rate: int = 16000
+) -> bytes:
     """
     Generate a test audio signal (sine wave) for debugging playback.
 
@@ -396,12 +401,18 @@ def generate_test_audio(duration_seconds: float = 1.0, frequency: float = 440.0,
         # Generate sine wave sample
         sample = int(32767 * math.sin(2 * math.pi * frequency * i / sample_rate))
         # Convert to 16-bit signed integer bytes
-        audio_data.append(sample.to_bytes(2, byteorder='little', signed=True))
+        audio_data.append(sample.to_bytes(2, byteorder="little", signed=True))
 
-    return b''.join(audio_data)
+    return b"".join(audio_data)
 
 
-def save_wav_file(audio_data: bytes, sample_rate: int = 16000, channels: int = 1, filename: Optional[str] = None, debug_mode: bool = False) -> Optional[str]:
+def save_wav_file(
+    audio_data: bytes,
+    sample_rate: int = 16000,
+    channels: int = 1,
+    filename: Optional[str] = None,
+    debug_mode: bool = False,
+) -> Optional[str]:
     """
     Save audio data as a WAV file in the .ug_game/wav directory (only in debug mode).
 
@@ -429,19 +440,18 @@ def save_wav_file(audio_data: bytes, sample_rate: int = 16000, channels: int = 1
         filename = f"voice_{timestamp}.wav"
 
     # Ensure .wav extension
-    if not filename.lower().endswith('.wav'):
-        filename += '.wav'
+    if not filename.lower().endswith(".wav"):
+        filename += ".wav"
 
     filepath = wav_dir / filename
 
     # Convert raw PCM to numpy array and save as WAV
     audio_array = np.frombuffer(audio_data, dtype=np.int16)
 
-    with wave.open(str(filepath), 'wb') as wav_file:
+    with wave.open(str(filepath), "wb") as wav_file:
         wav_file.setnchannels(channels)
         wav_file.setsampwidth(2)  # 16-bit = 2 bytes
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(audio_array.tobytes())
 
     return str(filepath)
-
