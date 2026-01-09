@@ -38,6 +38,14 @@ dependencies = [
 ]
 # System dependencies: ffmpeg (required for MP3 audio decoding)
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "coverage>=7.0.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/uglabs/ug-game"
 Repository = "https://github.com/uglabs/ug-game"
@@ -110,6 +118,13 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--disable-warnings",
+    "--cov=ug_game",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+]
+markers = [
+    "asyncio: marks tests as async",
 ]
 
 [tool.coverage.run]
@@ -125,4 +140,10 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "aioresponses>=0.7.8",
+    "respx>=0.22.0",
 ]
