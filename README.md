@@ -61,6 +61,11 @@ ug-game/
 │   │   ├── __init__.py
 │   │   ├── config.py            # Pydantic settings management (100% coverage)
 │   │   └── voice.py             # Audio recording/playback (72% coverage)
+│   ├── mcp/                     # Model Context Protocol server
+│   │   ├── __init__.py          # MCP package exports
+│   │   ├── server.py            # MCP server implementation
+│   │   ├── tools.py             # MCP tool definitions
+│   │   └── config.py            # MCP configuration
 │   └── sdk/
 │       ├── __init__.py
 │       ├── session.py           # High-level SDK interface (70% coverage)
@@ -70,6 +75,9 @@ ug-game/
 ├── pyproject.toml               # Modern Python packaging with uv
 ├── uv.lock                      # Dependency lock file
 ├── run_chat.py                  # Main CLI entry point
+├── run_mcp.py                   # MCP server entry point
+├── claude_desktop_config.json   # Claude Desktop configuration template
+├── MCP_README.md                # MCP server documentation
 └── README.md
 ```
 
@@ -697,6 +705,41 @@ await play_audio_response_async(audio_data, sample_rate=16000)
 ## ⚖️ License & Usage
 
 This software is provided for development and testing purposes with UG Labs PUG API. Commercial usage restrictions apply - consult Dr. Ori Cohen.
+
+## 🤖 Model Context Protocol (MCP) Server
+
+The UG Game SDK includes a complete MCP server implementation that allows Claude Desktop and other MCP-compatible applications to access text and voice chat functionality.
+
+### Quick MCP Setup
+
+1. **Install and configure** the MCP server:
+   ```bash
+   # Install dependencies
+   uv sync
+
+   # Configure environment (see Setup section above)
+   echo "SERVICE_ACCOUNT_API_KEY=your-key" > .env
+   echo "PLAYER_FEDERATED_ID=your-id" >> .env
+   ```
+
+2. **Configure Claude Desktop**:
+   - Copy `claude_desktop_config.json` to Claude's config directory
+   - Edit the file with your actual API credentials and correct path to `run_mcp.py`
+   - Restart Claude Desktop
+
+3. **Use the tools**:
+   - **Text Chat**: "Send a message to the AI about Python programming"
+   - **Voice Chat**: "Record a 3-second voice message about machine learning"
+
+### MCP Features
+
+- **Two Tools**: Text chat and voice chat capabilities
+- **Real-time Communication**: WebSocket-based interaction with UG Labs API
+- **Audio Processing**: Full voice recording, transcription, and playback
+- **Error Handling**: Comprehensive error reporting and recovery
+- **Async Architecture**: Non-blocking operations for smooth UX
+
+See [`MCP_README.md`](MCP_README.md) for detailed MCP server documentation and Claude Desktop integration instructions.
 
 ## 🆘 Troubleshooting
 
