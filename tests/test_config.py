@@ -1,9 +1,7 @@
 """Tests for UG Game configuration management."""
 
 import os
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import patch
 
 from ug_game.core.config import UGGameSettings, settings
 
@@ -14,6 +12,7 @@ class TestUGGameSettings:
     def test_default_values(self):
         """Test default configuration values."""
         import os
+
         # Clear environment variables that would override defaults
         env_vars_to_clear = [
             "DEVELOPER_API_KEY",
@@ -21,7 +20,7 @@ class TestUGGameSettings:
             "PLAYER_FEDERATED_ID",
             "API_BASE_URL",
             "WEBSOCKET_URL",
-            "DEFAULT_PROMPT"
+            "DEFAULT_PROMPT",
         ]
         original_values = {}
         for var in env_vars_to_clear:
@@ -59,7 +58,7 @@ class TestUGGameSettings:
             "PLAYER_FEDERATED_ID": "player_fed_789",
             "API_BASE_URL": "https://custom.api.com",
             "WEBSOCKET_URL": "wss://custom.ws.com/chat",
-            "DEFAULT_PROMPT": "Custom prompt"
+            "DEFAULT_PROMPT": "Custom prompt",
         }
 
         # Create a test settings class with mocked environment
@@ -84,7 +83,7 @@ class TestUGGameSettings:
         env_vars = {
             "developer_api_key": "dev_key_lowercase",
             "SERVICE_ACCOUNT_API_KEY": "service_key_mixed",
-            "player_federated_id": "player_fed_lowercase"
+            "player_federated_id": "player_fed_lowercase",
         }
 
         # Create a test settings class with mocked environment
@@ -105,7 +104,7 @@ class TestUGGameSettings:
         """Test that API keys are properly handled as SecretStr."""
         env_vars = {
             "DEVELOPER_API_KEY": "secret_dev_key",
-            "SERVICE_ACCOUNT_API_KEY": "secret_service_key"
+            "SERVICE_ACCOUNT_API_KEY": "secret_service_key",
         }
 
         # Create a test settings class with mocked environment
@@ -128,9 +127,7 @@ class TestUGGameSettings:
 
     def test_partial_environment_variables(self):
         """Test loading configuration with only some environment variables set."""
-        env_vars = {
-            "DEVELOPER_API_KEY": "only_dev_key"
-        }
+        env_vars = {"DEVELOPER_API_KEY": "only_dev_key"}
 
         # Create a test settings class with mocked environment
         class TestSettings(UGGameSettings):
@@ -153,7 +150,7 @@ class TestUGGameSettings:
         env_vars = {
             "DEVELOPER_API_KEY": "",
             "SERVICE_ACCOUNT_API_KEY": "",
-            "PLAYER_FEDERATED_ID": ""
+            "PLAYER_FEDERATED_ID": "",
         }
 
         # Create a test settings class with mocked environment
@@ -173,6 +170,7 @@ class TestUGGameSettings:
 
     def test_config_class_attributes(self):
         """Test Config class attributes."""
+
         # Create a test settings class to check config attributes
         class TestSettings(UGGameSettings):
             class Config:
@@ -198,6 +196,7 @@ class TestGlobalSettings:
     def test_global_settings_defaults(self):
         """Test that global settings has expected defaults."""
         import os
+
         # Clear environment variables that would override defaults
         env_vars_to_clear = [
             "DEVELOPER_API_KEY",
@@ -205,7 +204,7 @@ class TestGlobalSettings:
             "PLAYER_FEDERATED_ID",
             "API_BASE_URL",
             "WEBSOCKET_URL",
-            "DEFAULT_PROMPT"
+            "DEFAULT_PROMPT",
         ]
         original_values = {}
         for var in env_vars_to_clear:

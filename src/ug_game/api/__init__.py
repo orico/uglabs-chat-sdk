@@ -1,5 +1,5 @@
 """UG Game API module."""
 
-from .client import UGGameClient, UGGameAPIError, AuthenticationError, ConnectionError
+from .client import AuthenticationError, ConnectionError, UGGameAPIError, UGGameClient
 
 __all__ = ["UGGameClient", "UGGameAPIError", "AuthenticationError", "ConnectionError"]

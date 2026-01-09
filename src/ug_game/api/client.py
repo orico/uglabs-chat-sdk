@@ -38,9 +38,7 @@ class UGGameClient:
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.is_connected = False
 
-    async def authenticate_player(
-        self, service_account_api_key: str, federated_id: str
-    ) -> str:
+    async def authenticate_player(self, service_account_api_key: str, federated_id: str) -> str:
         """Authenticate as a player and get access token."""
         async with aiohttp.ClientSession() as session:
             payload = {
@@ -57,7 +55,7 @@ class UGGameClient:
 
                 data = await response.json()
                 self.access_token = data["access_token"]
-                return self.access_token
+                return str(self.access_token)
 
     async def authenticate_developer(self, developer_api_key: str) -> str:
         """Authenticate as a developer and get access token."""
@@ -73,7 +71,7 @@ class UGGameClient:
 
                 data = await response.json()
                 self.access_token = data["access_token"]
-                return self.access_token
+                return str(self.access_token)
 
     async def create_player(self, developer_api_key: str, external_id: str) -> Dict[str, Any]:
         """Create a new player using developer API key."""
@@ -86,15 +84,14 @@ class UGGameClient:
             payload = {"external_id": external_id}
 
             async with session.post(
-                f"{settings.api_base_url}/api/players",
-                headers=headers,
-                json=payload
+                f"{settings.api_base_url}/api/players", headers=headers, json=payload
             ) as response:
                 if response.status != 201:
                     error_text = await response.text()
                     raise UGGameAPIError(f"Player creation failed: {error_text}")
 
-                return await response.json()
+                result: Dict[str, Any] = await response.json()
+                return result
 
     async def connect(self) -> None:
         """Connect to WebSocket."""
@@ -102,7 +99,7 @@ class UGGameClient:
             self.websocket = await websockets.connect(settings.websocket_url)
             self.is_connected = True
         except WebSocketException as e:
-            raise ConnectionError(f"Failed to connect to WebSocket: {e}")
+            raise ConnectionError(f"Failed to connect to WebSocket: {e}") from e
 
     async def disconnect(self) -> None:
         """Disconnect from WebSocket."""
@@ -128,7 +125,7 @@ class UGGameClient:
                 yield data
         except ConnectionClosedError:
             self.is_connected = False
-            raise ConnectionError("WebSocket connection closed")
+            raise ConnectionError("WebSocket connection closed") from None
 
     async def authenticate_websocket(self) -> Dict[str, Any]:
         """Authenticate on WebSocket."""
@@ -181,10 +178,10 @@ class UGGameClient:
             "type": "stream",
             "kind": "interact",
             "text": text,
-            "audio_output": audio_output, 
+            "audio_output": audio_output,
             "uid": str(uuid.uuid4()),
             "client_start_time": asyncio.get_event_loop().time(),
-        } 
+        }
 
         print(f"DEBUG: Sending interact message: {message}")
         await self.send_message(message)
@@ -209,7 +206,7 @@ class UGGameClient:
 
         # Create WAV data in memory
         wav_buffer = io.BytesIO()
-        with wave.open(wav_buffer, 'wb') as wav_file:
+        with wave.open(wav_buffer, "wb") as wav_file:
             wav_file.setnchannels(channels)
             wav_file.setsampwidth(sample_width)
             wav_file.setframerate(sample_rate)
@@ -223,8 +220,8 @@ class UGGameClient:
 
         # Send audio in chunks
         for i in range(0, len(wav_bytes), chunk_size):
-            chunk = wav_bytes[i:i + chunk_size]
-            audio_b64 = base64.b64encode(chunk).decode('utf-8')
+            chunk = wav_bytes[i : i + chunk_size]
+            audio_b64 = base64.b64encode(chunk).decode("utf-8")
 
             message = {
                 "type": "request",
@@ -232,10 +229,7 @@ class UGGameClient:
                 "kind": "add_audio",
                 "timestamp": asyncio.get_event_loop().time(),
                 "audio": audio_b64,
-                "config": {
-                    "sampling_rate": sample_rate,
-                    "mime_type": "audio/wav"
-                }
+                "config": {"sampling_rate": sample_rate, "mime_type": "audio/wav"},
             }
 
             await self.send_message(message)
@@ -254,7 +248,7 @@ class UGGameClient:
             "uid": transcription_uid,
             "kind": "transcribe",
             "timestamp": asyncio.get_event_loop().time(),
-            "language_code": language_code
+            "language_code": language_code,
         }
 
         await self.send_message(transcribe_message)
@@ -262,14 +256,20 @@ class UGGameClient:
         # Wait for transcription response with timeout
         timeout = 10.0  # 10 second timeout
         try:
-            async with asyncio.timeout(timeout):
+            # Create a task for the async generator
+            async def wait_for_transcription():
                 async for response in self.receive_messages():
                     print(f"DEBUG: Received response: {response}")  # Debug all responses
-                    if (response.get("kind") == "transcribe" and
-                        response.get("uid") == transcription_uid):
-                        transcribed_text = response.get("text", "")
+                    if (
+                        response.get("kind") == "transcribe"
+                        and response.get("uid") == transcription_uid
+                    ):
+                        transcribed_text: str = str(response.get("text", ""))
                         print(f"DEBUG: Found transcription response: '{transcribed_text}'")
                         return transcribed_text
+                return ""  # No transcription found
+
+            return await asyncio.wait_for(wait_for_transcription(), timeout=timeout)
         except asyncio.TimeoutError:
             print(f"DEBUG: Transcription timeout after {timeout} seconds")
             return ""

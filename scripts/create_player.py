@@ -5,34 +5,39 @@ This script creates a new player and returns the federated_id needed for the int
 """
 
 import asyncio
-import json
-import aiohttp
 import os
+from typing import Optional
+
+import aiohttp
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configuration
-DEVELOPER_API_KEY = os.getenv('DEVELOPER_API_KEY', os.getenv('SERVICE_ACCOUNT_API_KEY', 'your-developer-api-key'))
+DEVELOPER_API_KEY = os.getenv(
+    "DEVELOPER_API_KEY", os.getenv("SERVICE_ACCOUNT_API_KEY", "your-developer-api-key")
+)
 BASE_URL = "https://pug.stg.uglabs.app"
 
-async def get_developer_access_token():
+
+async def get_developer_access_token() -> str:
     """Get developer access token for creating players."""
     async with aiohttp.ClientSession() as session:
-        payload = {
-            "api_key": DEVELOPER_API_KEY
-        }
+        payload = {"api_key": DEVELOPER_API_KEY}
 
         async with session.post(f"{BASE_URL}/api/auth/login", json=payload) as response:
             if response.status != 200:
                 error_text = await response.text()
-                raise Exception(f"Failed to get developer access token: {response.status} - {error_text}")
+                raise Exception(
+                    f"Failed to get developer access token: {response.status} - {error_text}"
+                )
 
             data = await response.json()
-            return data["access_token"]
+            return str(data["access_token"])
 
-async def create_player(external_id):
+
+async def create_player(external_id: str) -> Optional[str]:
     """Create a new player and return the federated_id."""
     print("Getting developer access token...")
     try:
@@ -45,16 +50,13 @@ async def create_player(external_id):
     print(f"Creating player with external_id: {external_id}")
 
     async with aiohttp.ClientSession() as session:
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
-        payload = {
-            "external_id": external_id
-        }
+        payload = {"external_id": external_id}
 
-        async with session.post(f"{BASE_URL}/api/players", headers=headers, json=payload) as response:
+        async with session.post(
+            f"{BASE_URL}/api/players", headers=headers, json=payload
+        ) as response:
             if response.status != 201:
                 error_text = await response.text()
                 raise Exception(f"Failed to create player: {response.status} - {error_text}")
@@ -65,15 +67,16 @@ async def create_player(external_id):
             print(f"  External ID: {data['external_id']}")
             print(f"  Federated ID: {data['federated_id']}")
 
-            return data['federated_id']
+            return str(data["federated_id"])
 
-async def main():
+
+async def main() -> None:
     """Main function to create a player."""
     print("UG Labs PUG API - Create Player Script")
     print("=" * 50)
 
     # Check if DEVELOPER_API_KEY is set
-    if DEVELOPER_API_KEY == 'your-developer-api-key':
+    if DEVELOPER_API_KEY == "your-developer-api-key":
         print("⚠️  Please set DEVELOPER_API_KEY in your .env file")
         print("   Get it from: https://pug-playground.stg.uglabs.app/profile")
         print("   (This is different from the Service Account API Key)")
@@ -97,9 +100,9 @@ async def main():
 
             # Optionally update .env file
             update_env = input("\nUpdate .env file automatically? (y/N): ").strip().lower()
-            if update_env == 'y':
+            if update_env == "y":
                 try:
-                    with open('.env', 'a') as f:
+                    with open(".env", "a") as f:
                         f.write(f"\nPLAYER_FEDERATED_ID={federated_id}\n")
                     print("✓ Updated .env file")
                 except Exception as e:
@@ -107,6 +110,7 @@ async def main():
 
     except Exception as e:
         print(f"✗ Error creating player: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

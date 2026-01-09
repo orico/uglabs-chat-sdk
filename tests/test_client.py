@@ -1,10 +1,11 @@
 """Tests for UG Game API client."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from aioresponses import aioresponses
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from ug_game.api.client import UGGameClient, UGGameAPIError, AuthenticationError, ConnectionError
+from ug_game.api.client import AuthenticationError, ConnectionError, UGGameAPIError, UGGameClient
 
 
 class TestUGGameClient:
@@ -22,7 +23,7 @@ class TestUGGameClient:
             m.post(
                 "https://pug.stg.uglabs.app/api/auth/login",
                 payload={"access_token": "test_token"},
-                status=200
+                status=200,
             )
 
             token = await client.authenticate_player("api_key", "federated_id")
@@ -35,9 +36,7 @@ class TestUGGameClient:
         """Test failed player authentication."""
         with aioresponses() as m:
             m.post(
-                "https://pug.stg.uglabs.app/api/auth/login",
-                status=401,
-                body="Invalid credentials"
+                "https://pug.stg.uglabs.app/api/auth/login", status=401, body="Invalid credentials"
             )
 
             with pytest.raises(UGGameAPIError):
@@ -50,7 +49,7 @@ class TestUGGameClient:
             m.post(
                 "https://pug.stg.uglabs.app/api/auth/login",
                 payload={"access_token": "dev_token"},
-                status=200
+                status=200,
             )
 
             token = await client.authenticate_developer("dev_api_key")
@@ -65,7 +64,7 @@ class TestUGGameClient:
             m.post(
                 "https://pug.stg.uglabs.app/api/auth/login",
                 status=401,
-                body="Invalid developer key"
+                body="Invalid developer key",
             )
 
             with pytest.raises(AuthenticationError, match="Developer authentication failed"):
@@ -79,7 +78,7 @@ class TestUGGameClient:
         async def mock_connect(*args, **kwargs):
             return mock_websocket
 
-        with patch('websockets.connect', side_effect=mock_connect) as mock_connect_func:
+        with patch("websockets.connect", side_effect=mock_connect) as mock_connect_func:
             await client.connect()
 
             assert client.websocket == mock_websocket
@@ -94,7 +93,7 @@ class TestUGGameClient:
         async def mock_connect_fail(*args, **kwargs):
             raise WebSocketException("Connection failed")
 
-        with patch('websockets.connect', side_effect=mock_connect_fail):
+        with patch("websockets.connect", side_effect=mock_connect_fail):
             with pytest.raises(ConnectionError, match="Failed to connect to WebSocket"):
                 await client.connect()
 
@@ -125,6 +124,7 @@ class TestUGGameClient:
     async def test_send_message_success(self, client):
         """Test sending message to WebSocket."""
         import json
+
         mock_websocket = AsyncMock()
         client.websocket = mock_websocket
         client.is_connected = True
@@ -154,7 +154,7 @@ class TestUGGameClient:
 
         # Test that the method exists and doesn't immediately fail
         # (actual async iteration testing would require complex mocking)
-        assert hasattr(client, 'receive_messages')
+        assert hasattr(client, "receive_messages")
 
     @pytest.mark.asyncio
     async def test_receive_messages_not_connected(self, client):
@@ -163,19 +163,18 @@ class TestUGGameClient:
         client.is_connected = False
 
         with pytest.raises(ConnectionError, match="Not connected to WebSocket"):
-            async for message in client.receive_messages():
+            async for _message in client.receive_messages():
                 pass
 
     @pytest.mark.asyncio
     async def test_authenticate_websocket_success(self, client):
         """Test successful WebSocket authentication."""
-        import json
         client.access_token = "test_token"
 
         # Mock send_message and receive_messages
-        with patch.object(client, 'send_message') as mock_send, \
-             patch.object(client, 'receive_messages') as mock_receive:
-
+        with patch.object(client, "send_message") as mock_send, patch.object(
+            client, "receive_messages"
+        ) as mock_receive:
             # Mock receive_messages to return auth response as async generator
             async def mock_receive_gen():
                 yield {"kind": "authenticate", "status": "success"}
@@ -200,9 +199,9 @@ class TestUGGameClient:
     async def test_set_configuration_success(self, client):
         """Test successful configuration setting."""
         # Mock send_message and receive_messages
-        with patch.object(client, 'send_message') as mock_send, \
-             patch.object(client, 'receive_messages') as mock_receive:
-
+        with patch.object(client, "send_message") as mock_send, patch.object(
+            client, "receive_messages"
+        ) as mock_receive:
             config = {"model": "gpt-4", "temperature": 0.7}
 
             async def mock_receive_gen():
@@ -220,8 +219,9 @@ class TestUGGameClient:
     async def test_send_text_interaction(self, client):
         """Test sending text interaction."""
         # Mock send_message and receive_messages
-        with patch.object(client, 'send_message') as mock_send, \
-             patch.object(client, 'receive_messages') as mock_receive:
+        with patch.object(client, "send_message") as mock_send, patch.object(
+            client, "receive_messages"
+        ) as mock_receive:
 
             async def mock_receive_gen():
                 yield {"type": "response", "text": "Hello"}
@@ -241,17 +241,25 @@ class TestUGGameClient:
     @pytest.mark.asyncio
     async def test_send_audio_transcription_success(self, client):
         """Test successful audio transcription."""
-        import base64
         import uuid
 
         # Mock send_message and receive_messages
-        with patch.object(client, 'send_message') as mock_send, \
-             patch.object(client, 'receive_messages') as mock_receive, \
-             patch('uuid.uuid4', return_value=uuid.UUID('12345678-1234-5678-1234-567812345678')):
+        with patch.object(client, "send_message") as mock_send, patch.object(
+            client, "receive_messages"
+        ) as mock_receive, patch(
+            "uuid.uuid4", return_value=uuid.UUID("12345678-1234-5678-1234-567812345678")
+        ):
 
             async def mock_receive_gen():
-                yield {"uid": "12345678-1234-5678-1234-567812345678", "kind": "ack"}  # Acknowledgment
-                yield {"uid": "12345678-1234-5678-1234-567812345678", "kind": "transcribe", "text": "Hello world"}
+                yield {
+                    "uid": "12345678-1234-5678-1234-567812345678",
+                    "kind": "ack",
+                }  # Acknowledgment
+                yield {
+                    "uid": "12345678-1234-5678-1234-567812345678",
+                    "kind": "transcribe",
+                    "text": "Hello world",
+                }
 
             mock_receive.side_effect = mock_receive_gen
 
@@ -267,8 +275,9 @@ class TestUGGameClient:
     @pytest.mark.asyncio
     async def test_send_audio_transcription_timeout(self, client):
         """Test audio transcription timeout."""
-        with patch.object(client, 'send_message'), \
-             patch.object(client, 'receive_messages') as mock_receive:
+        with patch.object(client, "send_message"), patch.object(
+            client, "receive_messages"
+        ) as mock_receive:
 
             async def mock_receive_gen():
                 # Yield nothing to simulate timeout
@@ -290,13 +299,13 @@ class TestUGGameClient:
             m.post(
                 "https://pug.stg.uglabs.app/api/auth/login",
                 payload={"access_token": "dev_token"},
-                status=200
+                status=200,
             )
             # Mock player creation
             m.post(
                 "https://pug.stg.uglabs.app/api/players",
                 payload={"federated_id": "player_123", "external_id": "ext_123"},
-                status=201
+                status=201,
             )
 
             result = await client.create_player("dev_key", "ext_123")
@@ -312,14 +321,10 @@ class TestUGGameClient:
             m.post(
                 "https://pug.stg.uglabs.app/api/auth/login",
                 payload={"access_token": "dev_token"},
-                status=200
+                status=200,
             )
             # Mock player creation failure
-            m.post(
-                "https://pug.stg.uglabs.app/api/players",
-                status=400,
-                body="Invalid external_id"
-            )
+            m.post("https://pug.stg.uglabs.app/api/players", status=400, body="Invalid external_id")
 
             with pytest.raises(UGGameAPIError, match="Player creation failed"):
                 await client.create_player("dev_key", "invalid_id")
