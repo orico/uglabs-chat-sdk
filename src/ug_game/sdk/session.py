@@ -13,7 +13,6 @@ from ..core.config import settings
 from ..core.voice import (
     record_voice_input_async,
     play_audio_response_async,
-    transcribe_audio_local_async,
 )
 from .types import ChatResponse, ChatCallbacks, ChatConfig
 
