@@ -13,7 +13,6 @@ from typing import Optional
 import numpy as np
 import pyaudio
 import sounddevice as sd
-import speech_recognition as sr
 
 
 class AsyncVoiceRecorder:
@@ -446,61 +445,3 @@ def save_wav_file(audio_data: bytes, sample_rate: int = 16000, channels: int = 1
 
     return str(filepath)
 
-
-def transcribe_audio_local(audio_data: bytes, sample_rate: int = 16000) -> Optional[str]:
-    """
-    Transcribe audio data to text using local speech recognition.
-
-    Args:
-        audio_data: Raw PCM audio data
-        sample_rate: Audio sample rate
-
-    Returns:
-        Transcribed text, or None if transcription failed
-    """
-    try:
-        # Convert raw PCM to WAV format for speech recognition
-        audio_array = np.frombuffer(audio_data, dtype=np.int16)
-
-        # Create WAV file in memory
-        wav_buffer = io.BytesIO()
-        with wave.open(wav_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(1)  # Mono
-            wav_file.setsampwidth(2)  # 16-bit
-            wav_file.setframerate(sample_rate if sample_rate else 16000)  # Use provided rate or default
-            wav_file.writeframes(audio_array.tobytes())
-
-        wav_buffer.seek(0)
-
-        # Use speech recognition
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_buffer) as source:
-            audio = recognizer.record(source)
-            try:
-                text = recognizer.recognize_google(audio)
-                return text
-            except sr.UnknownValueError:
-                print("Speech recognition could not understand audio")
-                return None
-            except sr.RequestError as e:
-                print(f"Speech recognition request failed: {e}")
-                return None
-
-    except Exception as e:
-        print(f"Local transcription failed: {e}")
-        return None
-
-
-async def transcribe_audio_local_async(audio_data: bytes, sample_rate: int = 16000) -> Optional[str]:
-    """
-    Transcribe audio data to text asynchronously using local speech recognition.
-
-    Args:
-        audio_data: Raw PCM audio data
-        sample_rate: Audio sample rate
-
-    Returns:
-        Transcribed text, or None if transcription failed
-    """
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, transcribe_audio_local, audio_data, sample_rate)
