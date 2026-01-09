@@ -5,6 +5,11 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from typing import Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from ug_game.sdk.session import ChatSession
 from ug_game.sdk.types import ChatCallbacks, ChatConfig
 from ug_game.api.client import UGGameClient
@@ -33,13 +38,13 @@ def mock_api_client(mock_websocket):
 def test_credentials():
     """
     Load test API credentials from environment.
-    
+
     Returns:
         dict with service_account_api_key and player_federated_id, or None if not available
     """
-    service_key = os.getenv("TEST_SERVICE_ACCOUNT_API_KEY")
-    player_id = os.getenv("TEST_PLAYER_FEDERATED_ID")
-    
+    service_key = os.getenv("SERVICE_ACCOUNT_API_KEY")
+    player_id = os.getenv("PLAYER_FEDERATED_ID")
+
     if service_key and player_id:
         return {
             "service_account_api_key": service_key,
@@ -51,7 +56,7 @@ def test_credentials():
 @pytest.fixture
 def developer_credentials():
     """Load developer API credentials from environment."""
-    dev_key = os.getenv("TEST_DEVELOPER_API_KEY")
+    dev_key = os.getenv("DEVELOPER_API_KEY")
     return {"developer_api_key": dev_key} if dev_key else None
 
 

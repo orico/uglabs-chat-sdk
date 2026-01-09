@@ -14,9 +14,12 @@ from ug_game.core.voice import (
     VoiceRecorder,
     generate_test_audio,
     play_audio_response,
+    play_audio_response_async,
     record_voice_input,
+    record_voice_input_async,
     save_wav_file,
     transcribe_audio_local,
+    transcribe_audio_local_async,
 )
 
 
@@ -336,5 +339,68 @@ def test_transcribe_audio_local_failure(mock_recognizer_class):
     mock_recognizer.recognize_google.side_effect = Exception("Recognition failed")
 
     result = transcribe_audio_local(b'test_audio_data')
+
+    assert result is None
+
+
+@pytest.fixture
+def player():
+    """Create a test audio player."""
+    return AudioPlayer()
+
+
+@pytest.mark.asyncio
+async def test_play_audio_data_async(player):
+    """Test asynchronous audio data playback."""
+    audio_data = b"test_audio_data"
+
+    with patch.object(player, 'play_audio_data') as mock_play:
+        await player.play_audio_data_async(audio_data)
+
+        mock_play.assert_called_once_with(audio_data)
+
+
+@patch('pyaudio.PyAudio')
+@pytest.mark.asyncio
+async def test_play_audio_response_async(mock_pyaudio_class):
+    """Test asynchronous audio response playback."""
+    audio_data = b"test_audio_data"
+
+    with patch('ug_game.core.voice.play_audio_response') as mock_play:
+        await play_audio_response_async(audio_data, sample_rate=16000)
+
+        mock_play.assert_called_once_with(audio_data, 16000)
+
+
+@patch('speech_recognition.AudioData')
+@patch('speech_recognition.Recognizer')
+@pytest.mark.asyncio
+async def test_transcribe_audio_local_async_success(mock_recognizer_class, mock_audio_data_class):
+    """Test successful asynchronous local audio transcription."""
+    mock_recognizer = MagicMock()
+    mock_recognizer_class.return_value = mock_recognizer
+
+    mock_audio_data = MagicMock()
+    mock_audio_data_class.return_value = mock_audio_data
+
+    mock_recognizer.recognize_google.return_value = "Hello world"
+
+    # Create valid PCM data (same as sync test)
+    valid_pcm_data = b'\x00\x01\x02\x03\x04\x05\x06\x07'
+
+    result = await transcribe_audio_local_async(valid_pcm_data)
+
+    assert result == "Hello world"
+
+
+@patch('speech_recognition.Recognizer')
+@pytest.mark.asyncio
+async def test_transcribe_audio_local_async_failure(mock_recognizer_class):
+    """Test failed asynchronous local audio transcription."""
+    mock_recognizer = MagicMock()
+    mock_recognizer_class.return_value = mock_recognizer
+    mock_recognizer.recognize_google.side_effect = Exception("Recognition failed")
+
+    result = await transcribe_audio_local_async(b"test_audio_data")
 
     assert result is None

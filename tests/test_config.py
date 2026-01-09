@@ -13,21 +13,43 @@ class TestUGGameSettings:
 
     def test_default_values(self):
         """Test default configuration values."""
-        # Create a test settings class that doesn't load from env
-        class TestSettings(UGGameSettings):
-            class Config:
-                env_file = None
-                env_file_encoding = "utf-8"
-                case_sensitive = False
+        import os
+        # Clear environment variables that would override defaults
+        env_vars_to_clear = [
+            "DEVELOPER_API_KEY",
+            "SERVICE_ACCOUNT_API_KEY",
+            "PLAYER_FEDERATED_ID",
+            "API_BASE_URL",
+            "WEBSOCKET_URL",
+            "DEFAULT_PROMPT"
+        ]
+        original_values = {}
+        for var in env_vars_to_clear:
+            original_values[var] = os.environ.get(var)
+            if var in os.environ:
+                del os.environ[var]
 
-        config = TestSettings()
+        try:
+            # Create a test settings class that doesn't load from env
+            class TestSettings(UGGameSettings):
+                class Config:
+                    env_file = None
+                    env_file_encoding = "utf-8"
+                    case_sensitive = False
 
-        assert config.developer_api_key is None
-        assert config.service_account_api_key is None
-        assert config.player_federated_id is None
-        assert config.api_base_url == "https://pug.stg.uglabs.app"
-        assert config.websocket_url == "wss://pug.stg.uglabs.app/interact"
-        assert "helpful AI assistant" in config.default_prompt
+            config = TestSettings()
+
+            assert config.developer_api_key is None
+            assert config.service_account_api_key is None
+            assert config.player_federated_id is None
+            assert config.api_base_url == "https://pug.stg.uglabs.app"
+            assert config.websocket_url == "wss://pug.stg.uglabs.app/interact"
+            assert "helpful AI assistant" in config.default_prompt
+        finally:
+            # Restore original environment variables
+            for var, value in original_values.items():
+                if value is not None:
+                    os.environ[var] = value
 
     def test_environment_variable_loading(self):
         """Test loading configuration from environment variables."""
@@ -175,14 +197,36 @@ class TestGlobalSettings:
 
     def test_global_settings_defaults(self):
         """Test that global settings has expected defaults."""
-        # Create a test settings class that doesn't load from env
-        class TestSettings(UGGameSettings):
-            class Config:
-                env_file = None
-                env_file_encoding = "utf-8"
-                case_sensitive = False
+        import os
+        # Clear environment variables that would override defaults
+        env_vars_to_clear = [
+            "DEVELOPER_API_KEY",
+            "SERVICE_ACCOUNT_API_KEY",
+            "PLAYER_FEDERATED_ID",
+            "API_BASE_URL",
+            "WEBSOCKET_URL",
+            "DEFAULT_PROMPT"
+        ]
+        original_values = {}
+        for var in env_vars_to_clear:
+            original_values[var] = os.environ.get(var)
+            if var in os.environ:
+                del os.environ[var]
 
-        fresh_settings = TestSettings()
+        try:
+            # Create a test settings class that doesn't load from env
+            class TestSettings(UGGameSettings):
+                class Config:
+                    env_file = None
+                    env_file_encoding = "utf-8"
+                    case_sensitive = False
 
-        assert fresh_settings.developer_api_key is None
-        assert fresh_settings.api_base_url == "https://pug.stg.uglabs.app"
+            fresh_settings = TestSettings()
+
+            assert fresh_settings.developer_api_key is None
+            assert fresh_settings.api_base_url == "https://pug.stg.uglabs.app"
+        finally:
+            # Restore original environment variables
+            for var, value in original_values.items():
+                if value is not None:
+                    os.environ[var] = value

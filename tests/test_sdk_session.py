@@ -82,7 +82,7 @@ class TestChatSession:
         # Mock responses with audio
         async def mock_text_interaction(*args, **kwargs):
             yield {"event": "text", "text": "Hello"}
-            yield {"event": "audio", "audio": b"test_audio_data"}
+            yield {"event": "audio", "audio": b"test_audio_data1"}  # 16 bytes for PCM
             yield {"kind": "close"}
         
         session.client.send_text_interaction = mock_text_interaction
@@ -198,19 +198,14 @@ class TestChatSession:
     async def test_create_player(self, session, mock_api_client):
         """Test creating a new player."""
         session.client = mock_api_client
-        
-        # Mock developer authentication and player creation
-        session.client.authenticate_developer = AsyncMock(return_value="dev_token")
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_response = AsyncMock()
-            mock_response.status = 201
-            mock_response.json = AsyncMock(return_value={"federated_id": "test_player_id"})
-            mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_response
-            
-            player_data = await session.create_player("dev_key", "external_id")
-            
-            assert player_data["federated_id"] == "test_player_id"
+
+        # Mock the client's create_player method directly
+        session.client.create_player = AsyncMock(return_value={"federated_id": "test_player_id"})
+
+        player_data = await session.create_player("dev_key", "external_id")
+
+        assert player_data["federated_id"] == "test_player_id"
+        session.client.create_player.assert_called_once_with("dev_key", "external_id")
 
     @pytest.mark.asyncio
     async def test_disconnect(self, session, mock_api_client):

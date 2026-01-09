@@ -1,15 +1,18 @@
-# UG Game - Chat Interface for UG Labs PUG API
+# UG Game - SDK & Chat Interface for UG Labs PUG API
 
-A modern, production-ready chat interface for interacting with the UG Labs PUG API through text-based conversations.
+A comprehensive, production-ready SDK and chat interface for interacting with the UG Labs PUG API through text and voice conversations.
 
 ## Features
 
 - 🗣️ **Interactive Chat**: Real-time text conversations with AI
+- 🎤 **Voice Support**: Audio input/output with speech recognition and synthesis
 - 👤 **Player Management**: Create and manage player accounts
+- 📦 **Python SDK**: Full-featured SDK for programmatic access
 - ⌨️ **Command History**: Navigate through previous messages with arrow keys
 - 🎨 **Rich Terminal UI**: Beautiful console interface with colors and formatting
 - ⚙️ **Configuration Management**: Environment-based settings with validation
-- 🏗️ **Production Structure**: Proper Python package layout
+- 🏗️ **Production Structure**: Proper Python package layout with 87 tests (46% coverage)
+- 🔗 **Real API Integration**: Full integration tests with live API
 
 ## Installation
 
@@ -34,7 +37,7 @@ A modern, production-ready chat interface for interacting with the UG Labs PUG A
 
 3. **Install dependencies**:
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 4. **Set up environment variables**:
@@ -82,6 +85,36 @@ python -m ug_game.cli.player create --external-id "user@example.com"
 python -m ug_game.cli.player list
 ```
 
+### Using the SDK
+
+```python
+from ug_game.sdk.session import ChatSession
+from ug_game.sdk.types import ChatCallbacks, ChatConfig
+
+# Set up callbacks
+callbacks = ChatCallbacks(
+    on_text_response=lambda text: print(f"AI: {text}"),
+    on_audio_response=lambda audio: print(f"Received audio: {len(audio)} bytes"),
+    on_error=lambda error: print(f"Error: {error}")
+)
+
+# Create session
+config = ChatConfig(debug_mode=True)
+session = ChatSession(callbacks=callbacks, config=config)
+
+# Initialize and chat
+await session.initialize(
+    service_account_key="your-service-key",
+    player_federated_id="your-player-id",
+    system_prompt="You are a helpful assistant."
+)
+
+response = await session.send_text("Hello!")
+print(f"Response: {response.text}")
+
+await session.disconnect()
+```
+
 ## Project Structure
 
 ```
@@ -91,19 +124,25 @@ ug-game/
 │       ├── __init__.py
 │       ├── api/
 │       │   ├── __init__.py
-│       │   └── client.py          # WebSocket API client
+│       │   └── client.py          # WebSocket API client (92% test coverage)
 │       ├── cli/
 │       │   ├── __init__.py
-│       │   ├── chat.py            # Chat interface
-│       │   └── player.py          # Player management
-│       └── core/
+│       │   ├── chat.py            # Chat interface (0% coverage)
+│       │   └── player.py          # Player management (98% coverage)
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── config.py          # Configuration management (100% coverage)
+│       │   └── voice.py           # Voice processing (72% coverage)
+│       └── sdk/
 │           ├── __init__.py
-│           └── config.py          # Configuration management
-├── tests/                         # Test files
-├── docs/                          # Documentation
+│           ├── session.py         # SDK session management (70% coverage)
+│           └── types.py           # SDK types and callbacks (73% coverage)
+├── tests/                         # Comprehensive test suite (87 tests)
+│   ├── conftest.py                # Test configuration and fixtures
+│   ├── test_*.py                  # Unit and integration tests
 ├── scripts/                       # Utility scripts
-├── pyproject.toml                 # Modern Python packaging
-├── requirements.txt               # Dependencies
+├── pyproject.toml                 # Modern Python packaging with uv
+├── uv.lock                        # Dependency lock file
 ├── run_chat.py                    # Main entry point
 └── README.md                      # This file
 ```
@@ -113,7 +152,7 @@ ug-game/
 ### Install in development mode
 
 ```bash
-pip install -e .
+uv sync --extra dev
 ```
 
 This allows you to use the `ug-chat` and `ug-player` commands directly.
@@ -121,7 +160,19 @@ This allows you to use the `ug-chat` and `ug-player` commands directly.
 ### Running Tests
 
 ```bash
+# Run all tests (87 tests, 46% coverage)
 pytest
+
+# Run with coverage report
+pytest --cov=ug_game --cov-report=html
+
+# Run integration tests (requires .env credentials)
+pytest tests/test_sdk_integration.py -v
+
+# Run specific test categories
+pytest tests/test_client.py    # API client tests (92% coverage)
+pytest tests/test_voice.py     # Voice processing tests
+pytest tests/test_sdk_session.py  # SDK tests
 ```
 
 ### Code Quality
@@ -163,7 +214,7 @@ The application uses the following configuration (all configurable via environme
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Cant be used commercially
 
 ## Support
 
