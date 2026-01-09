@@ -149,3 +149,5 @@ Thumbs.db
 .cache/
 .tmp/
 temp/.ug_game/
+.ug_game/
+claude_desktop_config.json

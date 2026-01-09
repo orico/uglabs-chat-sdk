@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ug-game": {
+      "command": "/Users/ori/Projects/ug-game/.venv/bin/python",
+      "args": ["run_mcp.py"],
+      "env": {
+        "SERVICE_ACCOUNT_API_KEY": "",
+        "PLAYER_FEDERATED_ID": ""
+      }
+    }
+  }
+}
