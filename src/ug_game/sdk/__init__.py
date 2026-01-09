@@ -6,7 +6,6 @@ from ..api.client import UGGameClient, UGGameAPIError, AuthenticationError, Conn
 from ..core.voice import (
     record_voice_input_async,
     play_audio_response_async,
-    transcribe_audio_local_async,
     generate_test_audio,
 )
 
@@ -21,6 +20,5 @@ __all__ = [
     "ConnectionError",
     "record_voice_input_async",
     "play_audio_response_async",
-    "transcribe_audio_local_async",
     "generate_test_audio",
 ]

@@ -33,7 +33,6 @@ dependencies = [
     "pyaudio>=0.2.13",
     "numpy>=1.21.0",
     "sounddevice>=0.4.6",
-    "speechrecognition>=3.10.0",
     "pydub>=0.25.0",
 ]
 # System dependencies: ffmpeg (required for MP3 audio decoding)

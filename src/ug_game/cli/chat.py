@@ -13,7 +13,7 @@ from rich.console import Console
 
 from ..api.client import UGGameClient, UGGameAPIError
 from ..core.config import settings
-from ..core.voice import record_voice_input_async, play_audio_response_async, transcribe_audio_local_async, generate_test_audio
+from ..core.voice import record_voice_input_async, play_audio_response_async, generate_test_audio
 
 
 class ChatSession:
@@ -311,17 +311,7 @@ class ChatSession:
 
             self.console.print("[bold blue]Voice recorded, processing...[/bold blue]")
 
-            # Do local transcription first (for debugging only)
-            if self.debug_mode:
-                self.console.print("[dim]Doing local speech recognition for comparison...[/dim]")
-
-            local_transcription = await transcribe_audio_local_async(audio_data)
-            if local_transcription:
-                self.console.print(f"[cyan]Local Transcribed: \"{local_transcription}\"[/cyan]")
-            else:
-                self.console.print("[yellow]Local speech recognition failed[/yellow]")
-
-            # Now try UG Labs Transcription API (this is what gets used for chat)
+            # Use UG Labs Transcription API (this is the main transcription method)
             self.console.print("[dim]Trying UG Labs Transcription API...[/dim]")
 
             transcribed_text = None
